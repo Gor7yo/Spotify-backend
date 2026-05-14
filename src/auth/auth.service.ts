@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto, SignInResponse, SignInResponseDTO } from './dto/main';
+import { CreateUserDto, SignInResponseDTO } from './dto/main';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginUserDTO } from './dto/login-user.dto';
@@ -19,7 +19,7 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async signUp(DTO: CreateUserDto): Promise<SignInResponse> {
+  async signUp(DTO: CreateUserDto): Promise<SignInResponseDTO> {
     const { username, email, password } = DTO;
 
     const user = await this.prisma.user.findFirst({
@@ -47,7 +47,7 @@ export class AuthService {
     return this.getTokens(createdUser);
   }
 
-  async signIn(DTO: LoginUserDTO): Promise<SignInResponse> {
+  async signIn(DTO: LoginUserDTO): Promise<SignInResponseDTO> {
     const { email, password } = DTO;
 
     const user = await this.prisma.user.findFirst({
@@ -97,12 +97,14 @@ export class AuthService {
       role,
     };
 
-    const refreshToken: any = {};
+    const refreshToken = {
+      token: this.generateSecureToken(),
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    };
 
-    refreshToken.token = this.generateSecureToken();
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 7);
-    refreshToken.expires = expires;
+    await this.prisma.refreshTokens.deleteMany({
+      where: { userId: id },
+    });
 
     const userFor = await this.prisma.user.findFirst({
       where: {
@@ -115,12 +117,29 @@ export class AuthService {
     const refreshTokenCreated = await this.prisma.refreshTokens.create({
       data: {
         token: refreshToken.token,
-        userId: userFor.id,
+        userId: id,
         expires: refreshToken.expires,
       },
     });
 
     const accesToken = await this.jwt.signAsync(payload);
     return new SignInResponseDTO(accesToken, refreshTokenCreated.token);
+  }
+
+  async refreshToken(token: string): Promise<SignInResponseDTO> {
+    const now = new Date();
+    const refreshToken = await this.prisma.refreshTokens.findFirst({
+      where: {
+        token,
+        expires: { lt: now },
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
+
+    return this.getTokens(refreshToken.user);
   }
 }
