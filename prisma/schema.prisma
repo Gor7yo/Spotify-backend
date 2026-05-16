@@ -38,7 +38,7 @@ model RefreshTokens {
   expires DateTime
   userId  String   @unique @map("user_id")
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("refresh_tokens")

@@ -112,7 +112,7 @@ export class AuthService {
       },
     });
 
-    if (!userFor) throw new UnauthorizedException();
+    if (!userFor) throw new UnauthorizedException('User undefinde');
 
     const refreshTokenCreated = await this.prisma.refreshTokens.create({
       data: {
