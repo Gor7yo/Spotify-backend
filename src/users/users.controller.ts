@@ -24,7 +24,7 @@ export class UsersController {
     return this.usersService.patchData(DTO, req.user?.id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PasswordConfirmGuard)
   @Delete('delete')
   delete(@Body() DTO: DeleteUserDTO) {
     return this.usersService.deleteUser(DTO);

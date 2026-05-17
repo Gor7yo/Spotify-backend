@@ -28,7 +28,7 @@ export class UsersService {
         username,
         bio,
         avatarUrl,
-        email
+        email,
       },
     });
 
@@ -43,12 +43,6 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Неверно указан email или пароль');
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isPasswordValid) {
       throw new UnauthorizedException('Неверно указан email или пароль');
     }
 

@@ -83,6 +83,18 @@ export class AuthService {
     return user;
   }
 
+  async revokeRefreshToken(token: string): Promise<void> {
+    await this.prisma.refreshTokens.deleteMany({
+      where: { token },
+    });
+  }
+
+  async revokeAllUserRefreshTokens(userId: string): Promise<void> {
+    await this.prisma.refreshTokens.deleteMany({
+      where: { userId },
+    });
+  }
+
   private generateSecureToken(): string {
     return randomBytes(48).toString('base64url');
   }
@@ -131,7 +143,7 @@ export class AuthService {
     const refreshToken = await this.prisma.refreshTokens.findFirst({
       where: {
         token,
-        expires: { lt: now },
+        expires: { gt: now },
       },
       include: {
         user: true,
@@ -139,6 +151,10 @@ export class AuthService {
     });
 
     if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
+
+    await this.prisma.refreshTokens.delete({
+      where: { id: refreshToken.id },
+    });
 
     return this.getTokens(refreshToken.user);
   }
